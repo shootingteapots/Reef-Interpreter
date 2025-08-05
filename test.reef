@@ -1,0 +1,24 @@
+struct Vector2 {
+    X: number,
+    Y: number,
+}
+
+struct Room {
+    Name: string,
+    Size: Vector2,
+}
+
+struct House {
+    Owner: string,
+    StreetName: string,
+    Rooms: {Room}, -- a list of rooms
+}
+
+-- construction syntax: <Name>{...<params>}
+var myHouse = House{"Fig", "Figgin it", {
+    Room{"Kitchen", Vector2{20, 20}},
+    Room{"Bedroom", Vector2{50, 30}}
+}};
+
+log myHouse.Rooms;
+log myHouse.Owner;
