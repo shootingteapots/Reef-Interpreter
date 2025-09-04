@@ -1,14 +1,14 @@
 #![allow(unused)]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, fs::write, path::Path};
 
-use crate::TokenKind;
+use crate::{ReefDebuggable, Token};
 
 /// Scanner is responsible for converting text input into a stream of tokens
 /// which represent the smallest components of a program.
 #[derive(Debug, Clone)]
 pub struct Scanner<'a> {
-    pub tokens: Vec<TokenKind>,
+    pub tokens: Vec<Token>,
 
     text: Vec<u8>,
     ptr: usize,
@@ -57,13 +57,13 @@ impl<'a> Scanner<'a> {
 
     /// Scan the input text and break it down into the smallest components.
     /// Token definitions can be found in ./lib.rs
-    pub fn scan(&mut self) -> &Vec<TokenKind> {
+    pub fn scan(&mut self) -> &Vec<Token> {
         let text_len = self.text.len();
 
         while self.ptr < text_len {
-            let c = self.text[self.ptr].into();
+            let current_char = self.text[self.ptr].into();
 
-            match c {
+            match current_char {
                 '\n' => {
                     self.line += 1;
                     self.ptr += 1;
@@ -84,214 +84,56 @@ impl<'a> Scanner<'a> {
                 '"' => {
                     let tk = self.scan_string();
                     self.add_token(tk);
-                    self.ptr += 1;
+                    self.advance();
                 }
                 ':' => {
-                    self.add_token(TokenKind::Colon);
-                    self.ptr += 1;
+                    self.add_token(Token::Colon);
+                    self.advance();
                 }
                 ';' => {
-                    self.add_token(TokenKind::Semicolon);
-                    self.ptr += 1;
+                    self.add_token(Token::Semicolon);
+                    self.advance();
                 }
                 '(' => {
-                    self.add_token(TokenKind::LParen);
-                    self.ptr += 1;
+                    self.add_token(Token::LParen);
+                    self.advance();
                 }
                 ')' => {
-                    self.add_token(TokenKind::RParen);
-                    self.ptr += 1;
+                    self.add_token(Token::RParen);
+                    self.advance();
                 }
                 '{' => {
-                    self.add_token(TokenKind::LBrace);
-                    self.ptr += 1;
+                    self.add_token(Token::LBrace);
+                    self.advance();
                 }
                 '}' => {
-                    self.add_token(TokenKind::RBrace);
-                    self.ptr += 1;
+                    self.add_token(Token::RBrace);
+                    self.advance();
                 }
                 ',' => {
-                    self.add_token(TokenKind::Comma);
-                    self.ptr += 1;
+                    self.add_token(Token::Comma);
+                    self.advance();
                 }
                 '.' => {
-                    self.add_token(TokenKind::Dot);
-                    self.ptr += 1;
+                    self.add_token(Token::Dot);
+                    self.advance();
                 }
                 c if c.is_whitespace() => {
-                    self.ptr += 1;
+                    self.advance();
                 }
                 _ => {
-                    panic!("Panic: Unrecognised character {}", c);
+                    panic!("Panic: Unrecognised character {}", current_char);
                 }
             };
         }
 
-        self.add_token(TokenKind::EndOfFile);
+        self.add_token(Token::EndOfFile);
 
         &self.tokens
     }
 
-    /// Scan characters that make up an int/float and convert it into a 64 bit
-    /// floating point number. This method can panic if there are multiple "."s
-    /// in a number, so PLEASE DONT DO THAT!!!
-    fn scan_number(&mut self) -> TokenKind {
-        let mut collected: String = String::new();
-
-        // Add the first character of the identifier
-        collected.push(self.text[self.ptr].into());
-        self.ptr += 1;
-
-        loop {
-            let c: char;
-            if self.ptr < self.text.len() {
-                c = self.text[self.ptr].into();
-            } else {
-                // Prevent indexing out of bounds
-                break;
-            }
-
-            if c.is_ascii_digit() || c == '.' {
-                self.ptr += 1;
-                collected.push(c);
-                continue;
-            } else if c == '_' {
-                self.ptr += 1;
-                continue;
-            } else {
-                break;
-            }
-        }
-
-        let number = collected.parse::<f64>();
-        if number.is_ok() {
-            TokenKind::Number(number.unwrap())
-        } else {
-            panic!("Failed to parse {} to a number.", collected);
-        }
-    }
-
-    /// Constructs an operator token, starting with one of a select few
-    /// characters.
-    fn scan_operator(&mut self) -> TokenKind {
-        let mut collected = String::new();
-
-        match self.text[self.ptr].into() {
-            '=' => {
-                collected.push(self.text[self.ptr].into());
-                self.ptr += 1;
-            }
-            '+' | '/' | '*' | '<' | '>' => {
-                collected.push(self.text[self.ptr].into());
-                self.ptr += 1;
-            }
-            _ => {}
-        };
-
-        TokenKind::Operator(collected)
-    }
-
-    /// There are multiple different things a hyphen can be contructed into,
-    /// so I put the logic for scanning tokens that start with a hyphen in
-    /// its own function.
-    fn handle_hyphen(&mut self) {
-        self.ptr += 1;
-
-        let next: char = self.text[self.ptr].into();
-
-        if next == '-' {
-            self.scan_comment();
-        } else if next == '>' {
-            self.add_token(TokenKind::Operator(String::from("->")));
-            self.ptr += 1;
-        } else {
-            self.add_token(TokenKind::Operator(String::from("-")));
-        }
-    }
-
-    /// Discard everything after the comment start until a newline character
-    /// is reached.
-    fn scan_comment(&mut self) {
-        let mut c: char = self.text[self.ptr].into();
-
-        while c != '\n' {
-            self.ptr += 1;
-            if self.ptr < self.text.len() {
-                c = self.text[self.ptr].into();
-            } else {
-                break;
-            }
-        }
-    }
-
-    /// Scans user defined identifiers, or if the identifier matches the name
-    /// of a keyword, return a keyword token instead.
-    fn scan_ident(&mut self) -> TokenKind {
-        let mut collected = String::new();
-
-        // Add the first character of the identifier
-        collected.push(self.text[self.ptr].into());
-        self.ptr += 1;
-
-        loop {
-            let c: char;
-            if self.ptr < self.text.len() {
-                c = self.text[self.ptr].into();
-            } else {
-                break;
-            }
-
-            if c.is_ascii_alphanumeric() {
-                self.ptr += 1;
-                collected.push(c);
-                continue;
-            } else if c == '_' {
-                self.ptr += 1;
-                continue;
-            } else {
-                // Stop because the number has ended
-                break;
-            }
-        }
-
-        if self.is_keyword(&collected) {
-            TokenKind::Keyword(collected)
-        } else {
-            TokenKind::Ident(collected)
-        }
-    }
-
-    /// Scans a string. A string starts and ends with a double quote, with the
-    /// text in between them.
-    fn scan_string(&mut self) -> TokenKind {
-        // Consume the first double quote
-        self.ptr += 1;
-        let mut collected = String::new();
-
-        loop {
-            // Get the character at index ptr
-            let c: char;
-            if self.ptr < self.text.len() {
-                c = self.text[self.ptr].into();
-            } else {
-                panic!("Reached end of file while scanning a string!");
-            }
-
-            if c != '\"' {
-                self.ptr += 1;
-                collected.push(c);
-            } else {
-                // Consume the ending double quote
-                self.ptr += 1;
-                break;
-            };
-        }
-
-        TokenKind::String(collected)
-    }
-
     /// Add a token to the list of tokens stored in the scanner state.
-    fn add_token(&mut self, token: TokenKind) {
+    fn add_token(&mut self, token: Token) {
         self.tokens.push(token);
     }
 
@@ -315,5 +157,197 @@ impl<'a> Scanner<'a> {
         } else {
             None
         }
+    }
+
+    /// Increment the current char pointer and return the new value.
+    fn advance(&mut self) -> usize {
+        self.ptr += 1;
+
+        self.ptr
+    }
+
+    /// There are multiple different things a hyphen can be contructed into,
+    /// so I put the logic for scanning tokens that start with a hyphen in
+    /// its own function.
+    fn handle_hyphen(&mut self) {
+        self.advance();
+
+        let next_char: char = self.text[self.ptr].into();
+
+        if next_char == '-' {
+            let comment_token = self.scan_comment();
+            self.add_token(comment_token);
+        } else if next_char == '>' {
+            self.add_token(Token::Operator(String::from("->")));
+            self.advance();
+        } else {
+            self.add_token(Token::Operator(String::from("-")));
+        }
+    }
+
+    /// Scan characters that make up an int/float and convert it into a 64 bit
+    /// floating point number. This method can panic if there are multiple "."s
+    /// in a number, so PLEASE DONT DO THAT!!!
+    fn scan_number(&mut self) -> Token {
+        let mut collected = String::new();
+
+        // Add the first character of the identifier
+        collected.push(self.text[self.ptr].into());
+        self.advance();
+
+        loop {
+            let current_char: char;
+            if self.ptr < self.text.len() {
+                current_char = self.text[self.ptr].into();
+            } else {
+                // Prevent indexing out of bounds
+                break;
+            }
+
+            if current_char.is_ascii_digit() || current_char == '.' {
+                self.advance();
+                collected.push(current_char);
+                continue;
+            } else if current_char == '_' {
+                self.advance();
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        let parsed_number = collected.parse::<f64>();
+        if parsed_number.is_ok() {
+            Token::Number(parsed_number.unwrap())
+        } else {
+            panic!("Failed to parse {} to a number.", collected);
+        }
+    }
+
+    /// Constructs an operator token, starting with one of a select few
+    /// characters.
+    fn scan_operator(&mut self) -> Token {
+        let mut collected = String::new();
+        let current_char = self.text[self.ptr].into();
+
+        match current_char {
+            '=' => {
+                collected.push(current_char);
+                self.advance();
+            }
+            '+' | '/' | '*' | '<' | '>' => {
+                collected.push(current_char);
+                self.advance();
+            }
+            _ => {}
+        };
+
+        Token::Operator(collected)
+    }
+
+    /// Save the contents of a comment as a string for potential use in the parser.
+    fn scan_comment(&mut self) -> Token {
+        let mut collected = String::new();
+        let mut current_char: char = self.text[self.ptr].into();
+
+        collected.push(current_char);
+
+        while current_char != '\n' {
+            if self.ptr < self.text.len() {
+                current_char = self.text[self.ptr].into();
+                collected.push(current_char)
+            } else {
+                break;
+            }
+
+            self.advance();
+        }
+
+        Token::Comment(collected)
+    }
+
+    /// Scans user defined identifiers, or if the identifier matches the name
+    /// of a keyword, return a keyword token instead.
+    fn scan_ident(&mut self) -> Token {
+        let mut collected = String::new();
+
+        // Add the first character of the identifier
+        collected.push(self.text[self.ptr].into());
+        self.advance();
+
+        loop {
+            let current_char: char;
+            if self.ptr < self.text.len() {
+                current_char = self.text[self.ptr].into();
+            } else {
+                break;
+            }
+
+            if current_char.is_ascii_alphanumeric() {
+                self.advance();
+                collected.push(current_char);
+                continue;
+            } else if current_char == '_' {
+                self.advance();
+                continue;
+            } else {
+                // Stop because the number has ended
+                break;
+            }
+        }
+
+        if self.is_keyword(&collected) {
+            Token::Keyword(collected)
+        } else {
+            Token::Ident(collected)
+        }
+    }
+
+    /// Scans a string. A string starts and ends with a double quote, with the
+    /// text in between them.
+    fn scan_string(&mut self) -> Token {
+        // Consume the first double quote
+        self.advance();
+        let mut collected = String::new();
+
+        loop {
+            // Get the character at index ptr
+            let c: char;
+            if self.ptr < self.text.len() {
+                c = self.text[self.ptr].into();
+            } else {
+                panic!("Reached end of file while scanning a string!");
+            }
+
+            if c != '\"' {
+                self.advance();
+                collected.push(c);
+            } else {
+                // Consume the ending double quote
+                self.advance();
+                break;
+            };
+        }
+
+        Token::String(collected)
+    }
+}
+
+impl<'a> ReefDebuggable for Scanner<'a> {
+    fn debug_write_to_file(&self, file_path: &str) {
+        let mut buf = String::new();
+
+        for token in &self.tokens {
+            let token_as_str = token.to_string();
+            let token_as_chars = token_as_str.chars();
+
+            for char in token_as_chars {
+                buf.push(char);
+            }
+
+            buf.push('\n');
+        }
+
+        write(Path::new(file_path), buf);
     }
 }

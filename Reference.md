@@ -22,5 +22,5 @@
 - struct
 - nil
 - var
-- func
+- fun
 - return

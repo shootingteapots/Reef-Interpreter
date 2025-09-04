@@ -1,24 +1,11 @@
-struct Vector2 {
-    X: number,
-    Y: number,
-}
+-- A basic structure that represents a person
+struct Person {
+    name: string,
+    age: number
+};
 
-struct Room {
-    Name: string,
-    Size: Vector2,
-}
+-- Creating a Person object
+var myPerson = Person{"James", 40};
 
-struct House {
-    Owner: string,
-    StreetName: string,
-    Rooms: {Room}, -- a list of rooms
-}
-
--- construction syntax: <Name>{...<params>}
-var myHouse = House{"Fig", "Figgin it", {
-    Room{"Kitchen", Vector2{20, 20}},
-    Room{"Bedroom", Vector2{50, 30}}
-}};
-
-log myHouse.Rooms;
-log myHouse.Owner;
+-- Printing out the persons name
+log myPerson.name;

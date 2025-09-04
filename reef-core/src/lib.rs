@@ -1,14 +1,19 @@
 pub mod parser;
 pub mod scanner;
 
+pub trait ReefDebuggable {
+    fn debug_write_to_file(&self, file_path: &str);
+}
+
 /// Different types of tokens which can be returned by the scanner.
 #[derive(Debug, Clone, PartialEq)]
-pub enum TokenKind {
+pub enum Token {
     Operator(String),
     Keyword(String),
     Ident(String),
     String(String),
     Number(f64),
+    Comment(String),
     LParen,
     RParen,
     LBrace,
@@ -22,26 +27,35 @@ pub enum TokenKind {
 
 /// The different types that an AST node can have.
 #[derive(Debug, Clone, PartialEq)]
-pub enum ASTNodeKind {}
-
-pub struct ASTNode {
-    pub node_kind: ASTNodeKind,
+pub enum ParseNodeKind {
+    Program,
+    Number(f64),
+    Sum,
+    Product,
 }
 
-impl std::fmt::Display for TokenKind {
+pub struct ParseNode {
+    pub node_kind: ParseNodeKind,
+    pub children: Vec<ParseNode>,
+}
+
+impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
-impl std::fmt::Display for ASTNodeKind {
+impl std::fmt::Display for ParseNodeKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
-impl ASTNode {
-    pub fn new(node_kind: ASTNodeKind) -> Self {
-        Self { node_kind }
+impl ParseNode {
+    pub fn new(node_kind: ParseNodeKind) -> Self {
+        Self {
+            node_kind,
+            children: Vec::new(),
+        }
     }
 }
