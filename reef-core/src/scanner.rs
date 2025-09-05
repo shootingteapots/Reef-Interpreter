@@ -48,7 +48,7 @@ impl<'a> Scanner<'a> {
 
         Self {
             text: String::from(text).into_bytes(),
-            tokens: vec![],
+            tokens: Vec::new(),
             ptr: 0,
             line: 1,
             keywords: keyword_map,
