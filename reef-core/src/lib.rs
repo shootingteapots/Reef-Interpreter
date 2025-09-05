@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, Result};
+
 pub mod parser;
 pub mod scanner;
 
@@ -39,14 +41,14 @@ pub struct ParseNode {
     pub children: Vec<ParseNode>,
 }
 
-impl std::fmt::Display for Token {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "{:?}", self)
     }
 }
 
-impl std::fmt::Display for ParseNodeKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for ParseNodeKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "{:?}", self)
     }
 }
@@ -57,5 +59,9 @@ impl ParseNode {
             node_kind,
             children: Vec::new(),
         }
+    }
+
+    pub fn add_child(&mut self, parse_node: ParseNode) {
+        self.children.push(parse_node);
     }
 }
