@@ -5,6 +5,7 @@ pub mod scanner;
 
 pub trait ReefDebuggable {
     fn debug_write_to_file(&self, file_path: &str);
+    fn debug(&self);
 }
 
 /// Different types of tokens which can be returned by the scanner.

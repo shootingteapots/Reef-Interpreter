@@ -8,10 +8,9 @@ use crate::{ReefDebuggable, Token};
 /// which represent the smallest components of a program.
 #[derive(Debug, Clone)]
 pub struct Scanner<'a> {
-    pub tokens: Vec<Token>,
-
+    tokens: Vec<Token>,
     text: Vec<u8>,
-    ptr: usize,
+    current_token: usize,
     line: i32,
     keywords: HashMap<&'a str, &'a str>,
 }
@@ -22,14 +21,12 @@ impl<'a> Scanner<'a> {
         let mut keyword_map: HashMap<&str, &str> = HashMap::new();
 
         // Populate the keyword list with the language keywords.
-        // todo: maybe change this to be a static dictionary instead?
         keyword_map.insert("continue", "continue");
         keyword_map.insert("struct", "struct");
         keyword_map.insert("elseif", "elseif");
         keyword_map.insert("return", "return");
         keyword_map.insert("typeof", "typeof");
         keyword_map.insert("false", "false");
-        keyword_map.insert("while", "while");
         keyword_map.insert("break", "break");
         keyword_map.insert("true", "true");
         keyword_map.insert("else", "else");
@@ -49,7 +46,7 @@ impl<'a> Scanner<'a> {
         Self {
             text: String::from(text).into_bytes(),
             tokens: Vec::new(),
-            ptr: 0,
+            current_token: 0,
             line: 1,
             keywords: keyword_map,
         }
@@ -57,16 +54,16 @@ impl<'a> Scanner<'a> {
 
     /// Scan the input text and break it down into the smallest components.
     /// Token definitions can be found in ./lib.rs
-    pub fn scan(&mut self) -> &Vec<Token> {
+    pub fn scan(&mut self) {
         let text_len = self.text.len();
 
-        while self.ptr < text_len {
-            let current_char = self.text[self.ptr].into();
+        while self.current_token < text_len {
+            let current_char = self.text[self.current_token].into();
 
             match current_char {
                 '\n' => {
                     self.line += 1;
-                    self.ptr += 1;
+                    self.current_token += 1;
                 }
                 '+' | '=' | '<' | '>' | '*' | '/' => {
                     let tk = self.scan_operator();
@@ -128,7 +125,9 @@ impl<'a> Scanner<'a> {
         }
 
         self.add_token(Token::EndOfFile);
+    }
 
+    pub fn get_tokens(&self) -> &Vec<Token> {
         &self.tokens
     }
 
@@ -150,7 +149,7 @@ impl<'a> Scanner<'a> {
     /// Peek one character ahead. if the next index is out of bounds, return
     /// None.
     fn peek(&self) -> Option<char> {
-        let new_ptr = self.ptr + 1;
+        let new_ptr = self.current_token + 1;
 
         if new_ptr < self.text.len() {
             Some(self.text[new_ptr].into())
@@ -161,9 +160,9 @@ impl<'a> Scanner<'a> {
 
     /// Increment the current char pointer and return the new value.
     fn advance(&mut self) -> usize {
-        self.ptr += 1;
+        self.current_token += 1;
 
-        self.ptr
+        self.current_token
     }
 
     /// There are multiple different things a hyphen can be contructed into,
@@ -172,7 +171,7 @@ impl<'a> Scanner<'a> {
     fn handle_hyphen(&mut self) {
         self.advance();
 
-        let next_char: char = self.text[self.ptr].into();
+        let next_char: char = self.text[self.current_token].into();
 
         if next_char == '-' {
             let comment_token = self.scan_comment();
@@ -192,13 +191,13 @@ impl<'a> Scanner<'a> {
         let mut collected = String::new();
 
         // Add the first character of the identifier
-        collected.push(self.text[self.ptr].into());
+        collected.push(self.text[self.current_token].into());
         self.advance();
 
         loop {
             let current_char: char;
-            if self.ptr < self.text.len() {
-                current_char = self.text[self.ptr].into();
+            if self.current_token < self.text.len() {
+                current_char = self.text[self.current_token].into();
             } else {
                 // Prevent indexing out of bounds
                 break;
@@ -228,7 +227,7 @@ impl<'a> Scanner<'a> {
     /// characters.
     fn scan_operator(&mut self) -> Token {
         let mut collected = String::new();
-        let current_char = self.text[self.ptr].into();
+        let current_char = self.text[self.current_token].into();
 
         match current_char {
             '=' => {
@@ -248,13 +247,13 @@ impl<'a> Scanner<'a> {
     /// Save the contents of a comment as a string for potential use in the parser.
     fn scan_comment(&mut self) -> Token {
         let mut collected = String::new();
-        let mut current_char: char = self.text[self.ptr].into();
+        let mut current_char: char = self.text[self.current_token].into();
 
         collected.push(current_char);
 
         while current_char != '\n' {
-            if self.ptr < self.text.len() {
-                current_char = self.text[self.ptr].into();
+            if self.current_token < self.text.len() {
+                current_char = self.text[self.current_token].into();
                 collected.push(current_char)
             } else {
                 break;
@@ -272,13 +271,13 @@ impl<'a> Scanner<'a> {
         let mut collected = String::new();
 
         // Add the first character of the identifier
-        collected.push(self.text[self.ptr].into());
+        collected.push(self.text[self.current_token].into());
         self.advance();
 
         loop {
             let current_char: char;
-            if self.ptr < self.text.len() {
-                current_char = self.text[self.ptr].into();
+            if self.current_token < self.text.len() {
+                current_char = self.text[self.current_token].into();
             } else {
                 break;
             }
@@ -313,8 +312,8 @@ impl<'a> Scanner<'a> {
         loop {
             // Get the character at index ptr
             let c: char;
-            if self.ptr < self.text.len() {
-                c = self.text[self.ptr].into();
+            if self.current_token < self.text.len() {
+                c = self.text[self.current_token].into();
             } else {
                 panic!("Reached end of file while scanning a string!");
             }
@@ -350,4 +349,6 @@ impl<'a> ReefDebuggable for Scanner<'a> {
 
         write(Path::new(file_path), buf);
     }
+
+    fn debug(&self) {}
 }

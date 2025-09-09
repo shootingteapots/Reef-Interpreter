@@ -17,7 +17,9 @@ fn main() {
     let text = read_file(Path::new(file_path.as_str()));
 
     let mut scanner = Scanner::new(text.as_str());
-    let tokens = scanner.scan();
+    scanner.scan();
+    let tokens = scanner.get_tokens();
+    dbg!(tokens);
 
     // let mut parser = Parser::new(tokens.clone());
     // let parse_node = parser.parse_tokens();

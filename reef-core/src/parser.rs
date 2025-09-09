@@ -2,7 +2,7 @@
 
 use std::thread::current;
 
-use crate::{ParseNode, ParseNodeKind, Token};
+use crate::{ParseNode, ParseNodeKind, ReefDebuggable, Token};
 
 /// The parser is responsible for reading a stream of tokens and outputting
 /// an abstract syntax tree representation of the program.
@@ -78,5 +78,15 @@ impl Parser {
         self.current_token += 1;
 
         &self.token_stream.get(self.current_token).unwrap()
+    }
+}
+
+impl ReefDebuggable for Parser {
+    fn debug_write_to_file(&self, file_path: &str) {
+        todo!()
+    }
+
+    fn debug(&self) {
+        todo!();
     }
 }
