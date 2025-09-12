@@ -6,34 +6,22 @@
 #![allow(unused)]
 
 use reef_core::{parser::Parser, scanner::Scanner, ReefDebuggable, Token};
-use std::{env::args, fs::read_to_string, path::Path};
+use std::{env, fs::read_to_string, path::Path};
+use std::collections::HashMap;
+
+const DEBUG_ENV_VAR: &str = "REEF_DEBUG"; // The environment variable for debug mode. If 1, run debug functions
 
 fn main() {
-    // This whole function is an absolute mess, rewrite this later for the
-    // love of god.
+    let args: Vec<String> = env::args().collect();
 
-    let args: Vec<String> = args().collect();
-    let file_path = &args[1];
-    let text = read_file(Path::new(file_path.as_str()));
-
-    let mut scanner = Scanner::new(text.as_str());
-    scanner.scan();
-    let tokens = scanner.get_tokens();
-    dbg!(tokens);
-
-    // let mut parser = Parser::new(tokens.clone());
-    // let parse_node = parser.parse_tokens();
-
-    scanner.debug_write_to_file("./_scanner_debug.txt");
 }
 
-/// Wrapper for `fs::read_to_string` which unwraps the text or panics because
-/// I hate ERROR HANDLING HAHAHA!
+/// Wrapper for `fs::read_to_string` which unwraps the text or panics
 fn read_file(file_path: &Path) -> String {
     let res = read_to_string(file_path);
-    if res.is_ok() {
-        res.unwrap()
-    } else {
+    if res.is_err() {
         panic!("{}", res.unwrap_err());
     }
+
+    res.unwrap()
 }
