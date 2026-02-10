@@ -78,7 +78,7 @@ impl<'a> Evaluator<'a> {
 
     fn evaluate_expression_statement(&mut self, expr: Expr) -> RuntimeType {
         let v = self.evaluate_expression(expr);
-        self.log("expr_stmt", v);
+        self.log(v);
         self.advance();
         RuntimeType::None
     }
@@ -90,9 +90,9 @@ impl<'a> Evaluator<'a> {
                 right_side,
                 operator,
             } => self.evaluate_binary_expression(left_side, right_side, operator),
-            Expr::ComparisonExpression { lhs, rhs, operator } => {
-                self.evaluate_comparison_expression(lhs, rhs, operator)
-            }
+            // Expr::ComparisonExpression { lhs, rhs, operator } => {
+            //     self.evaluate_comparison_expression(lhs, rhs, operator)
+            // }
             Expr::UnaryExpression(_operation, expression) => {
                 let ret = self.evaluate_expression(*expression);
 
@@ -129,95 +129,84 @@ impl<'a> Evaluator<'a> {
     }
 
     fn evaluate_if_statement(&mut self, condition: Expr, body: Box<Stmt>) -> RuntimeType {
-        let c = self.evaluate_expression(condition);
-
-        match c {
-            RuntimeType::Boolean(b) => match b {
-                Boolean::True => {
-                    self.evaluate_block_statement(match *body {
-                        Stmt::BlockStatement(statements) => statements,
-                        _ => self
-                            .error("Expected a block statement following if statement condition"),
-                    });
-                }
-                Boolean::False => self.advance(),
-            },
-            _ => self.error("If statement condition didnt evaluate to a boolean"),
-        }
+        // let c = match condition {
+        //     Expr::NilLiteral => RuntimeType::Boolean(Boolean::False),
+        //     Expr::Boolean(b) => RuntimeType::Boolean(b),
+        // };
 
         RuntimeType::None
     }
 
-    fn evaluate_comparison_expression(
-        &mut self,
-        lhs: Box<Expr>,
-        rhs: Box<Expr>,
-        operator: ComparisonOperator,
-    ) -> RuntimeType {
-        let lhs = self.evaluate_expression(*lhs);
-        let rhs = self.evaluate_expression(*rhs);
+    // fn evaluate_comparison_expression(
+    //     &mut self,
+    //     lhs: Box<Expr>,
+    //     rhs: Box<Expr>,
+    //     operator: ComparisonOperator,
+    // ) -> RuntimeType {
+    //     let lhs = self.evaluate_expression(*lhs);
+    //     let rhs = self.evaluate_expression(*rhs);
 
-        match operator {
-            ComparisonOperator::And => {
-                let lhs_v = match lhs {
-                    RuntimeType::Boolean(b) => b,
-                    _ => self.error(
-                        "Expected both sides of comparison expression to evaluate to a boolean",
-                    ),
-                };
+    //     match operator {
+    //         ComparisonOperator::And => {
+    //             let lhs_v = match lhs {
+    //                 RuntimeType::Boolean(b) => b,
+    //                 _ => self.error(
+    //                     "Expected both sides of comparison expression to evaluate to a boolean",
+    //                 ),
+    //             };
 
-                let rhs_v = match rhs {
-                    RuntimeType::Boolean(b) => b,
-                    _ => self.error(
-                        "Expected both sides of comparison expression to evaluate to a boolean",
-                    ),
-                };
+    //             let rhs_v = match rhs {
+    //                 RuntimeType::Boolean(b) => b,
+    //                 _ => self.error(
+    //                     "Expected both sides of comparison expression to evaluate to a boolean",
+    //                 ),
+    //             };
 
-                if lhs_v == Boolean::True && rhs_v == Boolean::True {
-                    RuntimeType::Boolean(Boolean::True)
-                } else {
-                    RuntimeType::Boolean(Boolean::False)
-                }
-            }
-            ComparisonOperator::Or => {
-                let lhs_v = match lhs {
-                    RuntimeType::Boolean(b) => b,
-                    _ => self.error(
-                        "Expected both sides of comparison expression to evaluate to a boolean",
-                    ),
-                };
+    //             if lhs_v == Boolean::True && rhs_v == Boolean::True {
+    //                 RuntimeType::Boolean(Boolean::True)
+    //             } else {
+    //                 RuntimeType::Boolean(Boolean::False)
+    //             }
+    //         }
+    //         ComparisonOperator::Or => {
+    //             let lhs_v = match lhs {
+    //                 RuntimeType::Boolean(b) => b,
+    //                 _ => self.error(
+    //                     "Expected both sides of comparison expression to evaluate to a boolean",
+    //                 ),
+    //             };
 
-                let rhs_v = match rhs {
-                    RuntimeType::Boolean(b) => b,
-                    _ => self.error(
-                        "Expected both sides of comparison expression to evaluate to a boolean",
-                    ),
-                };
+    //             let rhs_v = match rhs {
+    //                 RuntimeType::Boolean(b) => b,
+    //                 _ => self.error(
+    //                     "Expected both sides of comparison expression to evaluate to a boolean",
+    //                 ),
+    //             };
 
-                if lhs_v == Boolean::True || rhs_v == Boolean::True {
-                    RuntimeType::Boolean(Boolean::True)
-                } else {
-                    RuntimeType::Boolean(Boolean::False)
-                }
-            }
-            ComparisonOperator::EqualTo => RuntimeType::Boolean(match lhs == rhs {
-                true => Boolean::True,
-                false => Boolean::False,
-            }),
-            ComparisonOperator::NotEqualTo => RuntimeType::Boolean(match lhs != rhs {
-                true => Boolean::True,
-                false => Boolean::False,
-            }),
-            ComparisonOperator::GreaterThan => self.error("Greater than is not implemented"),
-            ComparisonOperator::LessThan => self.error("Less than is not implemented"),
-            ComparisonOperator::LessThanOrEqualTo => {
-                self.error("Less than/equal to is not implemented")
-            }
-            ComparisonOperator::GreaterThanOrEqualTo => {
-                self.error("Greater than/equal to is not implemented")
-            }
-        }
-    }
+    //             if lhs_v == Boolean::True || rhs_v == Boolean::True {
+    //                 RuntimeType::Boolean(Boolean::True)
+    //             } else {
+    //                 RuntimeType::Boolean(Boolean::False)
+    //             }
+    //         }
+    //         ComparisonOperator::EqualTo => RuntimeType::Boolean(match lhs == rhs {
+    //             true => Boolean::True,
+    //             false => Boolean::False,
+    //         }),
+    //         ComparisonOperator::NotEqualTo => RuntimeType::Boolean(match lhs != rhs {
+    //             true => Boolean::True,
+    //             false => Boolean::False,
+    //         }),
+    //         ComparisonOperator::GreaterThan => self.error("Greater than is not implemented"),
+    //         ComparisonOperator::LessThan => self.error("Less than is not implemented"),
+    //         ComparisonOperator::LessThanOrEqualTo => {
+    //             self.error("Less than/equal to is not implemented")
+    //         }
+    //         ComparisonOperator::GreaterThanOrEqualTo => {
+    //             self.error("Greater than/equal to is not implemented")
+    //         }
+    //     }
+    // }
 
     fn evaluate_block_statement(&mut self, statements: Vec<Stmt>) -> RuntimeType {
         for statement in statements {
@@ -254,6 +243,7 @@ impl<'a> Evaluator<'a> {
 
     /// Evaluates the value of a binary expression. For example 1 + 2 will
     /// evaluate to the runtime value of Number(3).
+    /// TODO: This evaluates things in the wrong order. Fix it.
     fn evaluate_binary_expression(
         &mut self,
         lhs: Box<Expr>,
@@ -289,8 +279,9 @@ impl<'a> Evaluator<'a> {
         RuntimeType::Number(final_num)
     }
 
-    fn log(&self, source: &str, value: RuntimeType) {
-        println!("{}", format!("[{}] {}", source, value).bright_green());
+    fn log(&self, value: RuntimeType) {
+        // println!("{}", format!("[{}] {}", source, value).bright_green());
+        println!("{}", format!("{}", value).bright_green());
     }
 
     fn error(&self, value: &str) -> ! {
@@ -313,9 +304,9 @@ impl<'a> Evaluator<'a> {
 /// Converts an expression to a boolean value. Useful for
 /// comparison expressions which require both sides to be
 /// booleans.
-fn expr_to_boolean(expr: &Expr) -> Boolean {
+fn expr_to_boolean(expr: &Expr) -> bool {
     match *expr {
-        Expr::NilLiteral | Expr::Boolean(Boolean::False) => Boolean::False,
-        _ => Boolean::True,
+        Expr::NilLiteral | Expr::Boolean(Boolean::False) => false,
+        _ => true,
     }
 }

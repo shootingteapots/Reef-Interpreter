@@ -32,7 +32,7 @@ Statement           ::= VariableDeclaration | FunctionDeclaration | Log
 CompoundStatement   ::= '{' { Statement } '}'
 VariableDeclaration ::= 'var' Identifier [ '=' Expression ] ';'
 FunctionDeclaration ::= 'fun' FunctionName FunctionParameters CompoundStatement
-IfStatement         ::= 'if' '(' ConditionalExpr { 'and' | 'or' ConditionalExpr } ')' CompoundStatement
+IfStatement         ::= 'if' ConditionalExpr { 'and' | 'or' ConditionalExpr } CompoundStatement
 IfElseStatement     ::= IfStatement 'else' CompoundStatement
 Log                 ::= 'log' Expression { ',' Expression } ';'
 Loop                ::= 'for' '(' ConditionalExpr ')' CompoundStatement

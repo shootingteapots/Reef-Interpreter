@@ -1,6 +1,6 @@
 use crate::common::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOperation {
     Minus,
 }
@@ -12,6 +12,13 @@ pub enum BinaryExprOperator {
     Multiply,
     Divide,
     Modulus,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LogicalOperator {
+    And,
+    Or,
+    Not,
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +66,13 @@ pub enum Expr {
         lhs: Box<Expr>,
         rhs: Box<Expr>,
         operator: ComparisonOperator,
+    },
+    LogicalExpression {
+        lhs: Box<Expr>,
+        // Optional because the expression could be a NOT expression, which
+        // won't have a right side.
+        rhs: Option<Box<Expr>>,
+        operator: LogicalOperator,
     },
     BinaryExpression {
         left_side: Box<Expr>,

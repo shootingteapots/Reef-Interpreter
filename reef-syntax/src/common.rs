@@ -12,6 +12,11 @@ pub enum ComparisonOperator {
     NotEqualTo,
     LessThanOrEqualTo,
     GreaterThanOrEqualTo,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum LogicalOperation {
     And,
     Or,
+    Not,
 }
