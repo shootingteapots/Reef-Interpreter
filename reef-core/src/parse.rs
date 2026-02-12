@@ -221,7 +221,7 @@ impl<'a> Parser<'a> {
 
                 match next {
                     Some(Token::BinaryOperator(_)) => Ok(self.parse_binary_expression()?),
-                    Some(Token::ComparisonOperator(_)) => Ok(self.parse_comparison_expression()?),
+                    // Some(Token::ComparisonOperator(_)) => Ok(self.parse_comparison_expression()?),
                     _ => {
                         let n = create_number_literal(n);
                         // self.advance();
@@ -262,7 +262,6 @@ impl<'a> Parser<'a> {
     fn parse_block_statement(&mut self) -> Result<Stmt, ParserError> {
         // Skip the '{'.
         self.advance();
-        println!("{:?}", self.get_current_token());
 
         let mut statements: Vec<Stmt> = vec![];
 
@@ -438,67 +437,55 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_comparison_expression(&mut self) -> Result<Expr, ParserError> {
-        let lhs: Expr;
-        let rhs: Expr;
-        let operator: ComparisonOperator;
+    // fn parse_comparison_expression(&mut self) -> Result<Expr, ParserError> {
+    //     let lhs: Expr;
+    //     let rhs: Expr;
+    //     let operator: ComparisonOperator;
 
-        lhs = match self.get_current_token() {
-            Some(Token::Keyword("true")) => Expr::Boolean(Boolean::True),
-            Some(Token::Keyword("false")) => Expr::Boolean(Boolean::False),
-            Some(Token::Delimiter('(')) => self.parse_group_expression()?,
-            Some(Token::String(s)) => create_string_literal(s),
-            Some(Token::BinaryOperator('-')) => {
-                // Skip past the '-'. May cause issues down the line but idc.
-                self.advance();
-                match self.get_current_token() {
-                    Some(Token::Number(n)) => create_number_literal(&*format!("-{}", n)),
-                    _ => {
-                        return Err(ParserError::SyntaxError {
-                            position: self.current,
-                            message: String::new(),
-                        })
-                    }
-                }
-            }
-            Some(Token::Number(n)) => {
-                let next = self.lookahead(1);
+    //     lhs = match self.get_current_token() {
+    //         Some(Token::Keyword("true")) => Expr::Boolean(Boolean::True),
+    //         Some(Token::Keyword("false")) => Expr::Boolean(Boolean::False),
+    //         Some(Token::Delimiter('(')) => self.parse_group_expression()?,
+    //         Some(Token::String(s)) => create_string_literal(s),
+    //         Some(Token::BinaryOperator('-')) => {
+    //             // Skip past the '-'. May cause issues down the line but idc.
+    //             self.advance();
+    //             match self.get_current_token() {
+    //                 Some(Token::Number(n)) => create_number_literal(&*format!("-{}", n)),
+    //                 _ => {
+    //                     return Err(ParserError::SyntaxError {
+    //                         position: self.current,
+    //                         message: String::new(),
+    //                     })
+    //                 }
+    //             }
+    //         }
+    //         Some(Token::Number(n)) => {
+    //             let next = self.lookahead(1);
 
-                match next {
-                    _ => create_number_literal(n),
-                }
-            }
-            Some(Token::Identifier(ident)) => {
-                // TODO: abstract this to a different function
-                let next = self.lookahead(1);
+    //             match next {
+    //                 _ => create_number_literal(n),
+    //             }
+    //         }
+    //         Some(Token::Identifier(ident)) => {
+    //             // TODO: abstract this to a different function
+    //             let next = self.lookahead(1);
 
-                match next {
-                    _ => Expr::Identifier(String::from(ident)),
-                }
-            }
-            _ => Expr::NilLiteral,
-        };
+    //             match next {
+    //                 _ => Expr::Identifier(String::from(ident)),
+    //             }
+    //         }
+    //         _ => Expr::NilLiteral,
+    //     };
 
-        operator = match self.expect_token(and_or!())? {
-            Token::ComparisonOperator(op) => op,
-            _t => {
-                return Err(ParserError::SyntaxError {
-                    position: self.current,
-                    message: String::new(),
-                })
-            }
-        };
+    //     rhs = self.parse_expression()?;
 
-        self.advance();
-
-        rhs = self.parse_expression()?;
-
-        Ok(Expr::ComparisonExpression {
-            lhs: Box::new(lhs),
-            rhs: Box::new(rhs),
-            operator,
-        })
-    }
+    //     Ok(Expr::ComparisonExpression {
+    //         lhs: Box::new(lhs),
+    //         rhs: Box::new(rhs),
+    //         operator,
+    //     })
+    // }
 
     /// Creates a variable declaration with a name (identifier) and a value (expression).
     fn parse_variable_declaration(&mut self) -> Result<Stmt, ParserError> {
@@ -587,7 +574,19 @@ impl<'a> Parser<'a> {
     ) -> Result<Token<'_>, ParserError> {
         self.advance();
         for expected in &expected_tokens {
-            let current = self.get_current_token().unwrap();
+            let current = match self.get_current_token() {
+                Some(t) => t,
+                None => {
+                    return Err(ParserError::SyntaxError {
+                        position: self.current,
+                        message: format!(
+                            "Expected any token from {:?}, but got nothing. Backtrace: {}",
+                            expected_tokens,
+                            Backtrace::capture()
+                        ),
+                    })
+                }
+            };
             match expected {
                 Token::Comment(_)
                 | Token::Identifier(_)

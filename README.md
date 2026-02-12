@@ -13,6 +13,6 @@ be found in the syntax.
 Simply clone the repository and build using cargo. The reef-core and reef-syntax library should be compiled at the same time.
 
 There are a few flags that can be passed to alter the behaviour of the program:
-- `-f`: specify the file to read code from. If not passed, the program enters REPL mode
-- `--debug`: enables debug features for parts of the interpreter if the value is greater than 0
+- `-f <path>`: specify the file to read code from. If not passed, the program enters REPL mode
+- `-d <number>`: enables debug features for parts of the interpreter if the value is greater than 0
 

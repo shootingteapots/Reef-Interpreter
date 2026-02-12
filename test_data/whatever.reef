@@ -1,4 +1,8 @@
-log 10;
-var x = 100;
-x = x + 10;
-log x;
+log 1, 3.33, "hi", true, false;
+var x = 100.5005;
+x;
+x = x / 30;
+{
+    x;
+    x / 30;
+}
