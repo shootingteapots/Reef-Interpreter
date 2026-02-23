@@ -1,6 +1,6 @@
 /*
-    This is the main file for the reef interpreter. It is a standalone
-    executable project that includes the reef-core as an external library.
+    This is the main file for the reef interpreter. It is a standalone executable
+    project that requires the reef-core and reef-syntax libraries.
 */
 
 use clap::Parser as ClapParser;
@@ -8,6 +8,7 @@ use reef_core::lex;
 use reef_core::parse;
 use reef_syntax::token::TokenDisplay;
 use std::io::Write;
+use std::process;
 use std::{fmt::Display, fs, io, path};
 
 mod evaluator;
@@ -42,6 +43,8 @@ struct Args {
     debug: u8,
 }
 
+/// Read Eval Print Loop (REPL) function. Loops indefinitely and runs the code that
+/// a user enters. You can type EXIT to quit the process.
 fn repl(args: &Args) {
     println!("/// You are in repl mode. Type 'EXIT' to exit. \\\\\\");
     loop {
@@ -54,18 +57,23 @@ fn repl(args: &Args) {
             .expect("Failed to read from stdin");
 
         match buf.as_str().trim() {
-            "EXIT" => panic!("Quit program"),
+            "EXIT" => process::exit(0),
             _ => run(&buf, args.debug),
         }
     }
 }
 
+/// Reads the source code from the file at <path> and calls the run function with
+/// the source code and debug lvl from the command line arguments.
 fn evaluate_file(args: &Args, path: path::PathBuf) {
     let source_code = fs::read_to_string(path).expect("Failed to read source code from file.");
 
     run(&source_code, args.debug);
 }
 
+/// Creates a scanner, parser, and evaluator to execute the source code that was
+/// passed as an argument. Also takes in the debug lvl from command line arguments
+/// which it passes to the other components.
 fn run(source_code: &str, debug: u8) {
     let mut scanner: lex::Scanner;
     let mut parser: parse::Parser;
@@ -107,14 +115,12 @@ fn run(source_code: &str, debug: u8) {
         },
     };
 
-    // dbg!(&parser.program);
-
     evaluator = eval::Evaluator::new(parser.program, debug);
     evaluator.evaluate_program();
-
-    // println!("{}", evaluator.get_main_scope());
 }
 
+/// Writes <data> to the file located at <path>. <data> is of generic type T which
+/// is any data type that implements the Display trait (meaning it has a string representation).
 fn write_to_debug_file<T: Display>(path: &path::Path, data: T) -> Result<(), String> {
     let res = fs::write(path, format!("{}", data));
 

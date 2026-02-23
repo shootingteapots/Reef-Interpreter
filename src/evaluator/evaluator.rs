@@ -1,8 +1,5 @@
 use colored::Colorize;
-use reef_syntax::{
-    ast::*,
-    common::{Boolean, ComparisonOperator},
-};
+use reef_syntax::{ast::*, common::Boolean};
 use std::fmt::{Display, Formatter, Result as FmtRes};
 
 use super::types::*;
@@ -43,19 +40,22 @@ impl<'a> Evaluator<'a> {
         &self.scope
     }
 
+    /// Loops over all statements in self.program and evaluates them one by one.
     pub fn evaluate_program(&mut self) {
         while self.ptr < self.program.len() {
             self.evaluate_statement(self.get_current_statement());
         }
     }
 
+    /// Top level function for evaluating statements. Matches a statement to an
+    /// evaluation function.
     fn evaluate_statement(&mut self, statement: Option<Stmt>) {
         match statement {
             Some(Stmt::ExpressionStatement(expr)) => self.evaluate_expression_statement(expr),
             Some(Stmt::LogStatement(args)) => self.evaluate_log_statement(args),
-            Some(Stmt::IfStatement { condition, body }) => {
-                self.evaluate_if_statement(condition, body)
-            }
+            // Some(Stmt::IfStatement { condition, body }) => {
+            //     self.evaluate_if_statement(condition, body)
+            // }
             Some(Stmt::VariableDeclaration { name, value }) => {
                 self.evaluate_variable_declaration(name, value)
             }
@@ -71,11 +71,13 @@ impl<'a> Evaluator<'a> {
         };
     }
 
+    /// Advances when an empty statement is found. Evaluates to None.
     fn evaluate_empty_statement(&mut self) -> RuntimeType {
         self.advance();
         RuntimeType::None
     }
 
+    /// Evaluates the contained expression and logs the result. Evaluates to None.
     fn evaluate_expression_statement(&mut self, expr: Expr) -> RuntimeType {
         let v = self.evaluate_expression(expr);
         self.log(v);
@@ -83,6 +85,8 @@ impl<'a> Evaluator<'a> {
         RuntimeType::None
     }
 
+    /// Top level function for evaluating expressions. Matches a type of expression
+    /// to a corresponding evaluation function.
     fn evaluate_expression(&mut self, expr: Expr) -> RuntimeType {
         match expr {
             Expr::BinaryExpression {
@@ -105,7 +109,13 @@ impl<'a> Evaluator<'a> {
             Expr::Boolean(boolean) => RuntimeType::Boolean(boolean),
             Expr::NumberLiteral(n) => RuntimeType::Number(n),
             Expr::StringLiteral(s) => RuntimeType::String(s),
-            Expr::Identifier(ident) => self.scope.get_variable(&ident),
+            Expr::Identifier(ident) => match self.scope.get_variable(&ident) {
+                Ok(v) => v,
+                Err(e) => {
+                    println!("{e:?}");
+                    RuntimeType::None
+                }
+            },
             _ => self.error(&format!("Unable to evaluate expression {:?}", expr)),
         }
     }
@@ -114,7 +124,10 @@ impl<'a> Evaluator<'a> {
     /// `self.variables` field.
     fn evaluate_variable_declaration(&mut self, name: String, value: Expr) -> RuntimeType {
         let value = self.evaluate_expression(value);
-        self.scope.set_variable(&name, value);
+        match self.scope.set_variable(&name, value) {
+            Ok(_) => {}
+            Err(e) => self.error(&format!("{e}")),
+        };
         self.advance();
         RuntimeType::None
     }
@@ -123,18 +136,16 @@ impl<'a> Evaluator<'a> {
     /// `self.variables` field.
     fn evaluate_variable_reassignment(&mut self, name: String, value: Expr) -> RuntimeType {
         let value = self.evaluate_expression(value);
-        self.scope.reassign_variable(&name, value);
+        match self.scope.reassign_variable(&name, value) {
+            Ok(_) => {}
+            Err(e) => self.error(&format!("{e}")),
+        };
         self.advance();
         RuntimeType::None
     }
 
     fn evaluate_if_statement(&mut self, condition: Expr, body: Box<Stmt>) -> RuntimeType {
-        // let c = match condition {
-        //     Expr::NilLiteral => RuntimeType::Boolean(Boolean::False),
-        //     Expr::Boolean(b) => RuntimeType::Boolean(b),
-        // };
-
-        RuntimeType::None
+        todo!();
     }
 
     // fn evaluate_comparison_expression(
@@ -145,7 +156,6 @@ impl<'a> Evaluator<'a> {
     // ) -> RuntimeType {
     //     let lhs = self.evaluate_expression(*lhs);
     //     let rhs = self.evaluate_expression(*rhs);
-
     //     match operator {
     //         ComparisonOperator::And => {
     //             let lhs_v = match lhs {
@@ -154,14 +164,12 @@ impl<'a> Evaluator<'a> {
     //                     "Expected both sides of comparison expression to evaluate to a boolean",
     //                 ),
     //             };
-
     //             let rhs_v = match rhs {
     //                 RuntimeType::Boolean(b) => b,
     //                 _ => self.error(
     //                     "Expected both sides of comparison expression to evaluate to a boolean",
     //                 ),
     //             };
-
     //             if lhs_v == Boolean::True && rhs_v == Boolean::True {
     //                 RuntimeType::Boolean(Boolean::True)
     //             } else {
@@ -175,14 +183,12 @@ impl<'a> Evaluator<'a> {
     //                     "Expected both sides of comparison expression to evaluate to a boolean",
     //                 ),
     //             };
-
     //             let rhs_v = match rhs {
     //                 RuntimeType::Boolean(b) => b,
     //                 _ => self.error(
     //                     "Expected both sides of comparison expression to evaluate to a boolean",
     //                 ),
     //             };
-
     //             if lhs_v == Boolean::True || rhs_v == Boolean::True {
     //                 RuntimeType::Boolean(Boolean::True)
     //             } else {
@@ -208,6 +214,8 @@ impl<'a> Evaluator<'a> {
     //     }
     // }
 
+    /// Loops over all the statements contained within a block and evaluates them
+    /// one by one. Evaluates to None.
     fn evaluate_block_statement(&mut self, statements: Vec<Stmt>) -> RuntimeType {
         for statement in statements {
             self.evaluate_statement(Some(statement));
@@ -216,8 +224,8 @@ impl<'a> Evaluator<'a> {
         RuntimeType::None
     }
 
-    /// Runs a log statement, printing all of its arguments one after another in
-    /// one string.
+    /// Evaluates a log statement, printing all of its arguments one after another in
+    /// one string. Evaluates to None.
     fn evaluate_log_statement(&mut self, args: Vec<Expr>) -> RuntimeType {
         let mut val_to_print = String::new();
 
@@ -243,7 +251,7 @@ impl<'a> Evaluator<'a> {
 
     /// Evaluates the value of a binary expression. For example 1 + 2 will
     /// evaluate to the runtime value of Number(3).
-    /// TODO: This evaluates things in the wrong order. Fix it.
+    /// TODO: This evaluates things in the wrong order <- no order of operations
     fn evaluate_binary_expression(
         &mut self,
         lhs: Box<Expr>,
@@ -279,15 +287,18 @@ impl<'a> Evaluator<'a> {
         RuntimeType::Number(final_num)
     }
 
+    /// Prints the given value in bright green.
     fn log(&self, value: RuntimeType) {
-        // println!("{}", format!("[{}] {}", source, value).bright_green());
         println!("{}", format!("{}", value).bright_green());
     }
 
+    /// Panics and closes the program with the given message printed in bright red.
     fn error(&self, value: &str) -> ! {
         panic!("{}", format!("[error] {}", value).bright_red());
     }
 
+    /// Returns an optional statement. Returns None if there are no statements
+    /// left in the program.
     fn get_current_statement(&self) -> Option<Stmt> {
         if self.ptr >= self.program.len() {
             return None;
@@ -296,6 +307,7 @@ impl<'a> Evaluator<'a> {
         Some(self.program[self.ptr].clone())
     }
 
+    /// Increments the self.ptr field.
     fn advance(&mut self) {
         self.ptr += 1;
     }

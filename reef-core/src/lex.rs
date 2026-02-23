@@ -66,6 +66,9 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    /// Matches the current character against a set of possibilities and
+    /// calls a function to construct a token/adds a token that the character
+    /// represents.
     fn next_token(&mut self) {
         match self.get_current_char() {
             Some(c) => match c {
@@ -77,7 +80,7 @@ impl<'a> Scanner<'a> {
                 '0'..='9' => self.scan_number(),
                 '"' => self.scan_string(),
                 '-' => self.handle_hyphen(),
-                '+' | '*' | '/' => {
+                '+' | '*' | '/' | '%' => {
                     self.tokens.push(Token::BinaryOperator(c));
                     self.advance();
                 }
@@ -151,6 +154,7 @@ impl<'a> Scanner<'a> {
         self.keywords.contains_key(ident)
     }
 
+    /// Returns the character in self.text at position self.current.
     fn get_current_char(&self) -> Option<char> {
         self.text.chars().nth(self.current)
     }
@@ -208,6 +212,7 @@ impl<'a> Scanner<'a> {
         }
 
         // Removed for sake of simplicity in the parser. Might add this back later :3
+        // ^^ I did not add this back D:
         // let sym = &self.text[start..self.current];
         // self.tokens.push(Token::Comment(sym));
     }

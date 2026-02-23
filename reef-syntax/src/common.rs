@@ -1,3 +1,8 @@
+/*
+   Types which are used in multiple different places across the lexer, parser, and
+   the evaluator, hence they are 'common'.
+*/
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Boolean {
     True,

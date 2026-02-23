@@ -34,7 +34,7 @@ VariableDeclaration ::= 'var' Identifier [ '=' Expression ] ';'
 FunctionDeclaration ::= 'fun' FunctionName FunctionParameters CompoundStatement
 IfStatement         ::= 'if' ConditionalExpr { 'and' | 'or' ConditionalExpr } CompoundStatement
 IfElseStatement     ::= IfStatement 'else' CompoundStatement
-Log                 ::= 'log' Expression { ',' Expression } ';'
+Log                 ::= 'log' [ Expression ] { ',' Expression } ';'
 Loop                ::= 'for' '(' ConditionalExpr ')' CompoundStatement
 Return              ::= 'return' Expression
 StructDeclaration   ::= 'struct' StructName StructFields

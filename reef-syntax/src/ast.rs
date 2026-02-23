@@ -1,3 +1,8 @@
+/*
+   Abstract syntax tree (AST) types generated in the parser and consumed by the
+   evaluator.
+*/
+
 use crate::common::*;
 
 #[derive(Debug, Clone, PartialEq)]

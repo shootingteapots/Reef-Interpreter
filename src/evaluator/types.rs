@@ -2,6 +2,8 @@ use reef_syntax::common::*;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter, Result as FmtRes};
 
+/// Types utilised in the evaluator. Every statement evaluates to None, while
+/// expressions can be that of a Number, a String, or a Boolean.
 #[derive(Debug, Clone, PartialEq)]
 pub enum RuntimeType {
     Number(f64),
@@ -10,6 +12,11 @@ pub enum RuntimeType {
     None,
 }
 
+#[derive(Debug, Clone)]
+pub struct VariableError(pub String);
+
+/// Structure used for storing variables in a program. Can have an optional
+/// parent for nested scopes.
 #[derive(Debug)]
 pub struct Scope<'a> {
     variables: HashMap<String, RuntimeType>,
@@ -34,34 +41,61 @@ impl<'a> Scope<'a> {
         }
     }
 
-    pub fn get_variable(&self, name: &str) -> RuntimeType {
+    /// Attempts to get a variable from self.variables. If it doesn't exist, it
+    /// tries to check the parent scope for the same variable. Panics if it can't
+    /// find the variable at all.
+    pub fn get_variable(&self, name: &str) -> Result<RuntimeType, VariableError> {
         let v = self.variables.get(name);
 
         match v {
-            Some(v) => v.clone(),
+            Some(v) => Ok(v.clone()),
             None => match &self.parent {
-                Some(parent) => parent.get_variable(name),
-                None => panic!("No variable called {} exists", name),
+                Some(parent) => match parent.get_variable(name) {
+                    Ok(v) => Ok(v),
+                    Err(e) => Err(e),
+                },
+                None => Err(VariableError(format!("No variable called {} exists", name))),
             },
         }
     }
 
-    pub fn set_variable(&mut self, name: &str, value: RuntimeType) -> RuntimeType {
+    /// Sets the variable <name> to <value> in self.variables.
+    pub fn set_variable(
+        &mut self,
+        name: &str,
+        value: RuntimeType,
+    ) -> Result<RuntimeType, VariableError> {
         if self.variables.contains_key(name) {
-            panic!("Variable named {name} already exists. Did you mean to reassign it?")
+            Err(VariableError(format!(
+                "Variable named {name} already exists. Did you mean to reassign it?"
+            )))
         } else {
             self.variables.insert(name.to_string(), value);
-            RuntimeType::None
+            Ok(RuntimeType::None)
         }
     }
 
-    pub fn reassign_variable(&mut self, name: &str, value: RuntimeType) -> RuntimeType {
+    /// Updates the value of variable <name> to <value>. Panics if the variable
+    /// doesn't exist
+    pub fn reassign_variable(
+        &mut self,
+        name: &str,
+        value: RuntimeType,
+    ) -> Result<RuntimeType, VariableError> {
         if self.variables.contains_key(name) {
             self.variables.insert(name.to_string(), value);
-            RuntimeType::None
+            Ok(RuntimeType::None)
         } else {
-            panic!("Attempt to reassign variable \"{name}\" which doesn't exist.")
+            Err(VariableError(format!(
+                "Attempt to reassign variable \"{name}\" which doesn't exist."
+            )))
         }
+    }
+}
+
+impl Display for VariableError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtRes {
+        write!(f, "{}", self.0)
     }
 }
 

@@ -80,8 +80,8 @@ pub enum ParserError {
 }
 
 impl<'a> Parser<'a> {
-    /// Constructs a new parser, taking a vector of tokens
-    /// produced by the scanner.
+    /// Constructs a new parser, taking a vector of tokens produced
+    /// by the scanner.
     pub fn new(tokens: Vec<Token<'a>>, debug: u8) -> Self {
         Self {
             tokens,
@@ -91,7 +91,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Top level function for parsing every token.
+    /// Top level function for parsing every token in a stream.
     pub fn parse_all(&mut self) -> Result<(), ParserError> {
         while self.current < self.tokens.len() {
             let n = self.next_statement()?;
@@ -102,15 +102,17 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    /// Matches the current token and calls the correct parse function
+    /// for it.
     fn next_statement(&mut self) -> Result<Option<Stmt>, ParserError> {
         match self.get_current_token() {
             // Statements
             Some(Token::Keyword("var")) => Ok(Some(self.parse_variable_declaration()?)),
             Some(Token::Keyword("log")) => Ok(Some(self.parse_log_statement()?)),
-            Some(Token::Keyword("if")) => Ok(Some(self.parse_if_statement()?)),
+            // Some(Token::Keyword("if")) => Ok(Some(self.parse_if_statement()?)),
             Some(Token::Delimiter('{')) => Ok(Some(self.parse_block_statement()?)),
 
-            // Expression statements
+            // Expression statement
             Some(Token::Keyword("true"))
             | Some(Token::Keyword("false"))
             | Some(Token::String(_))
@@ -118,6 +120,7 @@ impl<'a> Parser<'a> {
             | Some(Token::BinaryOperator('-'))
             | Some(Token::Delimiter('(')) => Ok(Some(self.parse_expression_statement()?)),
 
+            // Variable reassignment or expression statement
             Some(Token::Identifier(_)) => {
                 let next = self.lookahead(1);
 
@@ -127,11 +130,13 @@ impl<'a> Parser<'a> {
                 }
             }
 
+            // Empty statement
             Some(Token::Delimiter(';')) => {
                 self.advance();
                 Ok(Some(Stmt::EmptyStatement))
             }
 
+            // Unhandled token
             _t => {
                 println!("UNKNOWN TOKEN: {:?}", _t);
                 Err(ParserError::UnknownToken {
@@ -141,28 +146,24 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_if_statement(&mut self) -> Result<Stmt, ParserError> {
-        let condition: Expr;
-        let body: Stmt;
+    // fn parse_if_statement(&mut self) -> Result<Stmt, ParserError> {
+    //     let condition: Expr;
+    //     let body: Stmt;
+    //     // self.expect_token(Token::Delimiter('('))?;
+    //     // self.advance();
+    //     self.advance();
+    //     condition = self.parse_expression()?;
+    //     // self.expect_token(Token::Delimiter(')'))?;
+    //     self.expect_token(tok_lst!(Token::Keyword("then")))?;
+    //     self.advance();
+    //     body = self.parse_block_statement()?;
+    //     Ok(Stmt::IfStatement {
+    //         condition: condition,
+    //         body: Box::new(body),
+    //     })
+    // }
 
-        // self.expect_token(Token::Delimiter('('))?;
-        // self.advance();
-
-        self.advance();
-        condition = self.parse_expression()?;
-
-        // self.expect_token(Token::Delimiter(')'))?;
-        self.expect_token(tok_lst!(Token::Keyword("then")))?;
-        self.advance();
-
-        body = self.parse_block_statement()?;
-
-        Ok(Stmt::IfStatement {
-            condition: condition,
-            body: Box::new(body),
-        })
-    }
-
+    /// Constructs a variable reassignment statement (<name> '=' <expr>';').
     fn parse_variable_reassignment(&mut self) -> Result<Stmt, ParserError> {
         let name = match self.get_current_token() {
             Some(Token::Identifier(i)) => String::from(i),
@@ -175,7 +176,7 @@ impl<'a> Parser<'a> {
         };
 
         self.expect_token(equals!())?;
-        self.advance();
+        self.advance(); // Skip past the equals since we just needed to know it was there.
 
         let value = self.parse_expression()?;
 
@@ -196,7 +197,6 @@ impl<'a> Parser<'a> {
             Some(Token::Delimiter('(')) => Ok(self.parse_group_expression()?),
             Some(Token::String(s)) => {
                 let s = create_string_literal(s);
-                // self.advance();
                 Ok(s)
             }
             Some(Token::BinaryOperator('-')) => {
@@ -212,7 +212,7 @@ impl<'a> Parser<'a> {
                     )),
                     _ => Err(ParserError::SyntaxError {
                         position: self.current,
-                        message: format!("Wrong kind of argument after a unary operater bro!"),
+                        message: format!("Expected a number, identifier, or group expression after unary operator."),
                     }),
                 }
             }
@@ -221,10 +221,8 @@ impl<'a> Parser<'a> {
 
                 match next {
                     Some(Token::BinaryOperator(_)) => Ok(self.parse_binary_expression()?),
-                    // Some(Token::ComparisonOperator(_)) => Ok(self.parse_comparison_expression()?),
                     _ => {
                         let n = create_number_literal(n);
-                        // self.advance();
                         Ok(n)
                     }
                 }
@@ -242,16 +240,12 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Constructs a log statement ('log' [<expr>{','<expr>}]';').
     fn parse_log_statement(&mut self) -> Result<Stmt, ParserError> {
-        // log expr1, expr2, expr3;
-        // log expr1;
-        // log;
-
         // Skip past the "log" keyword.
         self.advance();
 
         let expressions = self.parse_call_site_arguments()?;
-        // let expressions = vec![self.expression()?];
 
         self.expect_token(semicolon!())?;
         self.advance();
@@ -259,6 +253,7 @@ impl<'a> Parser<'a> {
         Ok(Stmt::LogStatement(expressions))
     }
 
+    /// Constructs a block statement which is a group of statements ('{'{<stmt>}'}').
     fn parse_block_statement(&mut self) -> Result<Stmt, ParserError> {
         // Skip the '{'.
         self.advance();
@@ -346,17 +341,19 @@ impl<'a> Parser<'a> {
         Ok(Expr::GroupExpression(Box::new(inner)))
     }
 
-    fn parse_conditional_expression(&mut self) -> Result<Expr, ParserError> {
-        let lhs = self.parse_expression();
-        // self.expect_token()
-        Ok(Expr::FunctionCall {
-            func_name: String::new(),
-            arguments: vec![],
-        })
-    }
+    // fn parse_conditional_expression(&mut self) -> Result<Expr, ParserError> {
+    //     let lhs = self.parse_expression();
+    //     // self.expect_token()
+    //     Ok(Expr::FunctionCall {
+    //         func_name: String::new(),
+    //         arguments: vec![],
+    //     })
+    // }
 
-    /// Generates a binary expression, returning Ok if it was successful.
+    /// Generates a binary expression, which is any 2 expressions on either side of a
+    /// binary operator (+,-,*,/,%).
     fn parse_binary_expression(&mut self) -> Result<Expr, ParserError> {
+        // All 3 of these variables are initialised later in the function.
         let lhs: Expr;
         let rhs: Expr;
         let operator: BinaryExprOperator;
@@ -441,7 +438,6 @@ impl<'a> Parser<'a> {
     //     let lhs: Expr;
     //     let rhs: Expr;
     //     let operator: ComparisonOperator;
-
     //     lhs = match self.get_current_token() {
     //         Some(Token::Keyword("true")) => Expr::Boolean(Boolean::True),
     //         Some(Token::Keyword("false")) => Expr::Boolean(Boolean::False),
@@ -462,7 +458,6 @@ impl<'a> Parser<'a> {
     //         }
     //         Some(Token::Number(n)) => {
     //             let next = self.lookahead(1);
-
     //             match next {
     //                 _ => create_number_literal(n),
     //             }
@@ -470,16 +465,13 @@ impl<'a> Parser<'a> {
     //         Some(Token::Identifier(ident)) => {
     //             // TODO: abstract this to a different function
     //             let next = self.lookahead(1);
-
     //             match next {
     //                 _ => Expr::Identifier(String::from(ident)),
     //             }
     //         }
     //         _ => Expr::NilLiteral,
     //     };
-
     //     rhs = self.parse_expression()?;
-
     //     Ok(Expr::ComparisonExpression {
     //         lhs: Box::new(lhs),
     //         rhs: Box::new(rhs),
@@ -487,7 +479,7 @@ impl<'a> Parser<'a> {
     //     })
     // }
 
-    /// Creates a variable declaration with a name (identifier) and a value (expression).
+    /// Constructs a variable declaration statement ('var' <name> '=' <expr>';')
     fn parse_variable_declaration(&mut self) -> Result<Stmt, ParserError> {
         let name = match self.expect_token(ident!())? {
             Token::Identifier(i) => String::from(i),
@@ -500,9 +492,7 @@ impl<'a> Parser<'a> {
         };
 
         self.expect_token(equals!())?;
-
-        // Skip '='
-        self.advance();
+        self.advance(); // Skip '='
 
         let value = self.parse_expression()?;
 
@@ -592,7 +582,7 @@ impl<'a> Parser<'a> {
                 | Token::Identifier(_)
                 | Token::Number(_)
                 | Token::String(_)
-                | Token::BinaryOperator(' ') => {
+                | Token::BinaryOperator(_) => {
                     if mem::discriminant(expected) == mem::discriminant(&current) {
                         return Ok(current);
                     }
